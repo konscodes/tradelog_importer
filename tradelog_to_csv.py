@@ -21,6 +21,6 @@ df['Diff'] = df['Avr Entry'] - df['Avr Exit']
 df.loc[(df['Side'] == 'LONG') & (df['Diff'] > 0), 'Gross'] = df['Gross'] * -1
 df.loc[(df['Side'] == 'SHORT') & (df['Diff'] < 0), 'Gross'] = df['Gross'] * -1
 df = df.drop(columns=['Diff'])
-df = df.sort_values(by=['Open Date/Time'], ascending=True).reset_index(drop=True)
+df = df.sort_values(by=['Close Date/Time'], ascending=True).reset_index(drop=True)
 print(df)
 df.to_csv('tradelog_importer/trade.csv')
