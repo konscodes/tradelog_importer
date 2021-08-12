@@ -14,12 +14,12 @@ columns_list = df.columns.tolist()
 columns_sorted = columns_list[-2:] + columns_list[:-2] # takiing last two columns [-2:] and adding everything before that [:-2]
 df = df[columns_sorted]
 df['Shares'] = (df['Shares'] / 2).astype({'Shares': int})
-
+df['Side'] = df['Side'].str.title()
 # Condition with loc
 # df.loc[df['column name'] condition, 'new column name'] = 'value if condition is met'
 df['Diff'] = df['Avr Entry'] - df['Avr Exit']
-df.loc[(df['Side'] == 'LONG') & (df['Diff'] > 0), 'Gross'] = df['Gross'] * -1
-df.loc[(df['Side'] == 'SHORT') & (df['Diff'] < 0), 'Gross'] = df['Gross'] * -1
+df.loc[(df['Side'] == 'Long') & (df['Diff'] > 0), 'Gross'] = df['Gross'] * -1
+df.loc[(df['Side'] == 'Short') & (df['Diff'] < 0), 'Gross'] = df['Gross'] * -1
 df = df.drop(columns=['Diff'])
 df = df.sort_values(by=['Close Date/Time'], ascending=True).reset_index(drop=True)
 print(df)
