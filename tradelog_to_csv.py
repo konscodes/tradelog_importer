@@ -5,7 +5,8 @@ import pandas as pd
 with open('tradelog_importer/trades/trade.txt', 'r') as f:
     data = f.read().replace('\n',';').replace(';;','\n')
 
-hearer_list = ['Open Date', 'Open Time', 'Close Date', 'Close Time', 'Held', 'Symbol', 'Side', 'Avr Entry', 'Avr Exit', 'Shares', 'Gross', 'Comm'] 
+hearer_list = ['Open Date', 'Open Time', 'Close Date', 'Close Time', 'Held', 
+                'Symbol', 'Side', 'Avr Entry', 'Avr Exit', 'Shares', 'Gross', 'Comm'] 
 df = pd.read_csv(io.StringIO(data), sep=";", header=None, names=hearer_list)
 df['Open Date/Time'] = pd.to_datetime(df['Open Date'] + ' ' + df['Open Time'].str[4:]) # .str[4:] will cut first 3 char for the day of the week
 df['Close Date/Time'] = pd.to_datetime(df['Close Date'] + ' ' + df['Close Time'].str[4:])
