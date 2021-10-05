@@ -17,24 +17,20 @@ class Trades:
         trade_data = {'Symb': symbol, 'Position': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
-    def update(self, trade_index, shares):
-        position_change = position.get(trade_index) + shares
-        position.update(trade_index, position_change)
+    def update_status():
+        pass
 
-class Position:
-    def get(self, trade_index):
+    def get_position(self, trade_index):
         position_current = trades.df.at[trade_index, 'Position']
         return position_current
-        
-    def update(self, trade_index, position):
-        trades.df.at[trade_index, 'Position'] = position
 
+    def update_position(self, trade_index, position):
+        self.df.at[trade_index, 'Position'] = position
 
 # Execution DataFrame - Read the data from CSV
 path = 'tradelog_importer/trades/U6277264_20210712.tlg'
 executions = Executions(path)
 trades = Trades()
-position = Position()
 
 # Main loop
 for symbol in executions.df['Symb'].unique():
@@ -47,7 +43,8 @@ for symbol in executions.df['Symb'].unique():
         if match:
             print('Match, updating position')
             trade_index = max(trades.df.index)
-            trades.update(trade_index, shares)
+            new_position = trades.get_position(trade_index) + shares
+            trades.update_position(trade_index, new_position)
         else:
             print('No match, adding new entry')
             trades.add(symbol, shares)
