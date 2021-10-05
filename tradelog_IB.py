@@ -39,15 +39,17 @@ for symbol in executions.df['Symb'].unique():
     print(selection)
     for index, row in selection.iterrows():
         shares = row['Shares']
-        match = (trades.df['Symb'] == symbol).any()
-        if match:
+        condition1 = trades.df['Symb'] == symbol
+        condition2 = trades.df['Status'] == 'Open'
+        match = trades.df[condition1 & condition2]
+        if match.empty:
+            print('No match, adding new entry')
+            trades.add(symbol, shares)
+        else:
             print('Match, updating position')
             trade_index = max(trades.df.index)
             new_position = trades.get_position(trade_index) + shares
             trades.update_position(trade_index, new_position)
-        else:
-            print('No match, adding new entry')
-            trades.add(symbol, shares)
 
 print(trades.df)
 
