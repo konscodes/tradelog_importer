@@ -17,8 +17,7 @@ class Trades:
         trade_data = {'Symb': symbol, 'Position': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
-    def update(self, shares):
-        trade_index = max(self.df.index)
+    def update(self, trade_index, shares):
         position_change = position.get(trade_index) + shares
         position.update(trade_index, position_change)
 
@@ -47,7 +46,8 @@ for symbol in executions.df['Symb'].unique():
         match = (trades.df['Symb'] == symbol).any()
         if match:
             print('Match, updating position')
-            trades.update(shares)
+            trade_index = max(trades.df.index)
+            trades.update(trade_index, shares)
         else:
             print('No match, adding new entry')
             trades.add(symbol, shares)
