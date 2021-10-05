@@ -40,7 +40,7 @@ trades = Trades()
 for symbol in executions.df['Symb'].unique():
     print(symbol)
     selection = executions.df[executions.df['Symb'] == symbol]
-    print(selection)
+    print(selection) # Why to use selection ?
     for index, row in selection.iterrows():
         shares = row['Shares']
         condition1 = trades.df['Symb'] == symbol
@@ -51,7 +51,8 @@ for symbol in executions.df['Symb'].unique():
             trades.add(symbol, shares)
         else:
             print('Match found, updating position')
-            trade_index = max(trades.df.index) # Need to fix this to allow for random execution input
+            #trade_index = max(trades.df.index) # Need to fix this to allow for random execution input
+            trade_index = match.index[0]
             initial_position = trades.get_position(trade_index)
             new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
@@ -74,20 +75,21 @@ for symbol in executions.df['Symb'].unique():
 
 print(trades.df)
 
-# ''' Loop for counting shares
-# 1) For each row update the open_df_trades df_executions 
-#     a) If no Symb 
-#         add new entry, 
-#         add shares, 
-#         set status to Open
-#     b) Elseif there is Symb and status is Open
-#         add shares,
-#             If shares are 0
-#                 change status to Closed
-#     c) Else there is Symb and status is Closed
-#         add new entry,
-#         add shares,
-#         set status to Open
-# '''
+''' Loop for counting shares
+1) For each row update the open_df_trades df_executions 
+    a) If no Symb 
+        add new entry, 
+        add shares, 
+        set status to Open
+    b) Elseif there is Symb and status is Open
+        add shares,
+            If shares are 0
+                change status to Closed
+    c) Else there is Symb and status is Closed
+        add new entry,
+        add shares,
+        set status to Open
+'''
 
-# # add trade ID and create additional column with trade ID for execution - trade match
+# add trade ID and create additional column with trade ID for execution - trade match
+# sort the data by date before iteration 
