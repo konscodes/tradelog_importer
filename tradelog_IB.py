@@ -17,8 +17,8 @@ class Trades:
         trade_data = {'Symb': symbol, 'Position': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
-    def update_status():
-        pass
+    def update_status(self, trade_index, status):
+        trades.df.at[trade_index, 'Status'] = status
 
     def get_position(self, trade_index):
         position_current = trades.df.at[trade_index, 'Position']
@@ -26,6 +26,10 @@ class Trades:
 
     def update_position(self, trade_index, position):
         self.df.at[trade_index, 'Position'] = position
+    
+    def get_side(self, trade_index):
+        side = trades.df.at[trade_index, 'Side']
+        return side
 
 # Execution DataFrame - Read the data from CSV
 path = 'tradelog_importer/trades/U6277264_20210712.tlg'
@@ -48,8 +52,25 @@ for symbol in executions.df['Symb'].unique():
         else:
             print('Match, updating position')
             trade_index = max(trades.df.index)
-            new_position = trades.get_position(trade_index) + shares
+            initial_position = trades.get_position(trade_index)
+            new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
+            side = trades.get_side(trade_index)
+            if new_position == 0:
+                print('Position is closed, changing status to Closed')
+                trades.update_status(trade_index, 'Closed')
+            elif new_position < 0 and side == 'Long':
+                print('Long -> flip to Short detected, adding new trade')
+                trades.update_position(trade_index, 0)
+                trades.update_status(trade_index, 'Closed')
+                trades.add(symbol, new_position)
+            elif new_position > 0 and side == 'Short':
+                print('Short -> flip to Long detected, adding new trade')
+                trades.update_position(trade_index, 0)
+                trades.update_status(trade_index, 'Closed')
+                trades.add(symbol, new_position)
+            else:
+                print('Trade is still open, continue')
 
 print(trades.df)
 
