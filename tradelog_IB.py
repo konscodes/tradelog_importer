@@ -47,11 +47,11 @@ for symbol in executions.df['Symb'].unique():
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
         if match.empty:
-            print('No match, adding new entry')
+            print('No match in the DataFrame, adding new entry')
             trades.add(symbol, shares)
         else:
-            print('Match, updating position')
-            trade_index = max(trades.df.index)
+            print('Match found, updating position')
+            trade_index = max(trades.df.index) # Need to fix this to allow for random execution input
             initial_position = trades.get_position(trade_index)
             new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
