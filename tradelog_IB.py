@@ -11,7 +11,8 @@ class Executions:
 
 class Trades:
     def __init__(self):
-        self.df = pd.DataFrame(columns=['Symb', 'Total Pos', 'Open Pos', 'Side', 'Status', 'Trade ID'])
+        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Entry', 'Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Pos', 'Status', 'Trade ID']
+        self.df = pd.DataFrame(columns=headers)
 
     def add(self, symbol, shares):
         side = 'Long' if shares > 0 else 'Short'
