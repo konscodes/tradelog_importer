@@ -7,6 +7,7 @@ class Executions:
         self.df = pd.read_csv(path, sep='|', header=None, skiprows=5, engine='python', skipfooter=1, parse_dates=[7, 8])
         self.df = self.df.drop(columns=[0,1,3,4,5,7,9,11,13,15])
         self.df = self.df.rename(columns={2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
+        self.df = self.df.sort_values(by='Date Time')
 
 class Trades:
     def __init__(self):
@@ -37,41 +38,37 @@ executions = Executions(path)
 trades = Trades()
 
 # Main loop
-for symbol in executions.df['Symb'].unique():
-    print(symbol)
-    selection = executions.df[executions.df['Symb'] == symbol]
-    print(selection) # Why to use selection ?
-    for index, row in selection.iterrows():
-        shares = row['Shares']
-        condition1 = trades.df['Symb'] == symbol
-        condition2 = trades.df['Status'] == 'Open'
-        match = trades.df[condition1 & condition2]
-        if match.empty:
-            print('No match in the DataFrame, adding new entry')
-            trades.add(symbol, shares)
+for index, row in executions.df.iterrows():
+    symbol = row['Symb']
+    shares = row['Shares']
+    condition1 = trades.df['Symb'] == symbol
+    condition2 = trades.df['Status'] == 'Open'
+    match = trades.df[condition1 & condition2]
+    if match.empty:
+        print('No match in the DataFrame, adding new entry')
+        trades.add(symbol, shares)
+    else:
+        print('Match found, updating position')
+        trade_index = match.index[0]
+        initial_position = trades.get_position(trade_index)
+        new_position = initial_position + shares
+        trades.update_position(trade_index, new_position)
+        side = trades.get_side(trade_index)
+        if new_position == 0:
+            print('Position is closed, changing status to Closed')
+            trades.update_status(trade_index, 'Closed')
+        elif new_position < 0 and side == 'Long':
+            print('Long -> flip to Short detected, adding new trade')
+            trades.update_position(trade_index, 0)
+            trades.update_status(trade_index, 'Closed')
+            trades.add(symbol, new_position)
+        elif new_position > 0 and side == 'Short':
+            print('Short -> flip to Long detected, adding new trade')
+            trades.update_position(trade_index, 0)
+            trades.update_status(trade_index, 'Closed')
+            trades.add(symbol, new_position)
         else:
-            print('Match found, updating position')
-            #trade_index = max(trades.df.index) # Need to fix this to allow for random execution input
-            trade_index = match.index[0]
-            initial_position = trades.get_position(trade_index)
-            new_position = initial_position + shares
-            trades.update_position(trade_index, new_position)
-            side = trades.get_side(trade_index)
-            if new_position == 0:
-                print('Position is closed, changing status to Closed')
-                trades.update_status(trade_index, 'Closed')
-            elif new_position < 0 and side == 'Long':
-                print('Long -> flip to Short detected, adding new trade')
-                trades.update_position(trade_index, 0)
-                trades.update_status(trade_index, 'Closed')
-                trades.add(symbol, new_position)
-            elif new_position > 0 and side == 'Short':
-                print('Short -> flip to Long detected, adding new trade')
-                trades.update_position(trade_index, 0)
-                trades.update_status(trade_index, 'Closed')
-                trades.add(symbol, new_position)
-            else:
-                print('Trade is still open, continue')
+            print('Trade is still open, continue')
 
 print(trades.df)
 
