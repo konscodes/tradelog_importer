@@ -14,9 +14,9 @@ class Trades:
         headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Entry', 'Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Pos', 'Status', 'Trade ID']
         self.df = pd.DataFrame(columns=headers)
 
-    def add(self, symbol, shares):
+    def add(self, date, symbol, shares):
         side = 'Long' if shares > 0 else 'Short'
-        trade_data = {'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open'}
+        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
     def update_status(self, trade_index, status):
@@ -32,14 +32,37 @@ class Trades:
     def get_side(self, trade_index):
         side = trades.df.at[trade_index, 'Side']
         return side
+    
+    def set_date(self, trade_index, date, stamp):
+        if stamp == 'Open' or 'Close':
+            self.df.at[trade_index, stamp] = date
+        else:
+            raise print('Not able to validate the Date stamp')
+    
+    def close(self, trade_index, close_date):
+        self.set_date(trade_index, close_date, 'Close')
+        self.update_status(trade_index, 'Closed')
 
 # Execution DataFrame - Read the data from CSV
 path = 'tradelog_importer/trades/U6277264_20210712.tlg'
 executions = Executions(path)
 trades = Trades()
 
+def detect_flip(new_position, side):
+    if new_position == 0:
+        return 'Closed'
+    elif new_position < 0 and side == 'Long':
+        print('Long -> flip to Short detected, adding new trade')
+        return 'Flip'
+    elif new_position > 0 and side == 'Short':
+        print('Short -> flip to Long detected, adding new trade')
+        return 'Flip'
+    else:
+        return 'Continue'
+
 # Main loop
 for index, row in executions.df.iterrows():
+    open_date = row['Date Time']
     symbol = row['Symb']
     shares = row['Shares']
     condition1 = trades.df['Symb'] == symbol
@@ -49,7 +72,7 @@ for index, row in executions.df.iterrows():
         print('No match in the DataFrame, adding new entry')
         # Create trade ID
         # Add first exec ID to the key dict
-        trades.add(symbol, shares)
+        trades.add(open_date, symbol, shares)
     else:
         print('Match found, updating position')
         # Add exec ID to key dict
@@ -58,21 +81,19 @@ for index, row in executions.df.iterrows():
         new_position = initial_position + shares
         trades.update_position(trade_index, new_position)
         side = trades.get_side(trade_index)
-        if new_position == 0:
+        status_check = detect_flip(new_position, side)
+        if status_check == 'Closed':
             print('Position is closed, changing status to Closed')
-            trades.update_status(trade_index, 'Closed')
-        elif new_position < 0 and side == 'Long':
-            print('Long -> flip to Short detected, adding new trade')
+            close_date = row['Date Time']
+            trades.close(trade_index, close_date)
+        elif status_check == 'Flip':
+            close_date = row['Date Time']
             trades.update_position(trade_index, 0)
-            trades.update_status(trade_index, 'Closed')
+            trades.close(trade_index, close_date)
             # Change current exec shares to fit to 0 total
-            trades.add(symbol, new_position)
+            open_date = close_date
+            trades.add(open_date, symbol, new_position)
             # Create exec ID and add to key dict
-        elif new_position > 0 and side == 'Short':
-            print('Short -> flip to Long detected, adding new trade')
-            trades.update_position(trade_index, 0)
-            trades.update_status(trade_index, 'Closed')
-            trades.add(symbol, new_position)
         else:
             print('Trade is still open, continue')
 
@@ -97,7 +118,6 @@ Loop for counting shares
 '''
 
 # add trade ID and create additional column with trade ID for execution - trade match
-# sort the data by date before iteration 
 
 '''
 Supporting position flip and taking missing executions into account
