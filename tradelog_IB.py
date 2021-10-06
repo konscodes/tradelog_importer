@@ -11,22 +11,22 @@ class Executions:
 
 class Trades:
     def __init__(self):
-        self.df = pd.DataFrame(columns=['Symb', 'Position', 'Side', 'Status'])
+        self.df = pd.DataFrame(columns=['Symb', 'Open Pos', 'Side', 'Status'])
 
     def add(self, symbol, shares):
         side = 'Long' if shares > 0 else 'Short'
-        trade_data = {'Symb': symbol, 'Position': shares, 'Side': side, 'Status': 'Open'}
+        trade_data = {'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
     def update_status(self, trade_index, status):
         trades.df.at[trade_index, 'Status'] = status
 
     def get_position(self, trade_index):
-        position_current = trades.df.at[trade_index, 'Position']
+        position_current = trades.df.at[trade_index, 'Open Pos']
         return position_current
 
     def update_position(self, trade_index, position):
-        self.df.at[trade_index, 'Position'] = position
+        self.df.at[trade_index, 'Open Pos'] = position
     
     def get_side(self, trade_index):
         side = trades.df.at[trade_index, 'Side']
