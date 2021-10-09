@@ -1,5 +1,5 @@
 import pandas as pd
-import pdb
+import datetime as dt
 
 class Executions:
     def __init__(self, path):
@@ -28,6 +28,12 @@ class Trades:
 
     def update_position(self, trade_index, position):
         self.df.at[trade_index, 'Open Pos'] = position
+
+    def update_price(self, trade_index, state, price):
+        if state == 'Entry':
+            trades.df.at[trade_index, 'Entry'] = price
+        elif state == 'Exit':
+            trades.df.at[trade_index, 'Exit'] = price
     
     def get_side(self, trade_index):
         side = trades.df.at[trade_index, 'Side']
@@ -48,7 +54,7 @@ path = 'tradelog_importer/trades/U6277264_20210712.tlg'
 executions = Executions(path)
 trades = Trades()
 
-def detect_flip(new_position, side):
+def trade_status(new_position, side):
     if new_position == 0:
         return 'Closed'
     elif new_position < 0 and side == 'Long':
@@ -60,43 +66,52 @@ def detect_flip(new_position, side):
     else:
         return 'Continue'
 
-# Main loop
-for index, row in executions.df.iterrows():
-    open_date = row['Date Time']
-    symbol = row['Symb']
-    shares = row['Shares']
-    condition1 = trades.df['Symb'] == symbol
-    condition2 = trades.df['Status'] == 'Open'
-    match = trades.df[condition1 & condition2]
-    if match.empty:
-        print('No match in the DataFrame, adding new entry')
-        # Create trade ID
-        # Add first exec ID to the key dict
-        trades.add(open_date, symbol, shares)
-    else:
-        print('Match found, updating position')
-        # Add exec ID to key dict
-        trade_index = match.index[0]
-        initial_position = trades.get_position(trade_index)
-        new_position = initial_position + shares
-        trades.update_position(trade_index, new_position)
-        side = trades.get_side(trade_index)
-        status_check = detect_flip(new_position, side)
-        if status_check == 'Closed':
-            print('Position is closed, changing status to Closed')
-            close_date = row['Date Time']
-            trades.close(trade_index, close_date)
-        elif status_check == 'Flip':
-            close_date = row['Date Time']
-            trades.update_position(trade_index, 0)
-            trades.close(trade_index, close_date)
-            # Change current exec shares to fit to 0 total
-            open_date = close_date
-            trades.add(open_date, symbol, new_position)
-            # Create exec ID and add to key dict
-        else:
-            print('Trade is still open, continue')
+def calculate_held():
+    t1 = pd.to_datetime(trades.df['Close'])
+    t2 = pd.to_datetime(trades.df['Open'])
+    trades.df['Held'] = t1 - t2
+    trades.df['Held'] = trades.df['Held'].astype(str).str[-8:]
 
+def main_loop():
+    for index, row in executions.df.iterrows():
+        open_date = row['Date Time']
+        symbol = row['Symb']
+        shares = row['Shares']
+        price = row['Price']
+        condition1 = trades.df['Symb'] == symbol
+        condition2 = trades.df['Status'] == 'Open'
+        match = trades.df[condition1 & condition2]
+        if match.empty:
+            print('No match in the DataFrame, adding new entry')
+            # Create trade ID
+            # Add first exec ID to the key dict
+            trades.add(open_date, symbol, shares)
+        else:
+            print('Match found, updating position')
+            # Add exec ID to key dict
+            trade_index = match.index[0]
+            initial_position = trades.get_position(trade_index)
+            new_position = initial_position + shares
+            trades.update_position(trade_index, new_position)
+            side = trades.get_side(trade_index)
+            status_check = trade_status(new_position, side)
+            if status_check == 'Closed':
+                print('Position is closed, changing status to Closed')
+                close_date = row['Date Time']
+                trades.close(trade_index, close_date)
+            elif status_check == 'Flip':
+                close_date = row['Date Time']
+                trades.update_position(trade_index, 0)
+                trades.close(trade_index, close_date)
+                # Change current exec shares to fit to 0 total
+                open_date = close_date
+                trades.add(open_date, symbol, new_position)
+                # Create exec ID and add to key dict
+            else:
+                print('Trade is still open, continue')
+
+main_loop()
+calculate_held()
 print(trades.df)
 
 ''' 
