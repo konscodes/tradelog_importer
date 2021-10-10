@@ -1,5 +1,5 @@
 import pandas as pd
-import datetime as dt
+from time import time
 
 class Executions:
     def __init__(self, path):
@@ -8,6 +8,8 @@ class Executions:
         self.df = self.df.drop(columns=[0,1,3,4,5,7,9,11,13,15])
         self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
         self.df = self.df.sort_values(by='Date Time')
+        missing_check = pd.isnull(self.df['Symb'])
+        self.df = self.df[missing_check == False]
 
 class Trades:
     def __init__(self):
@@ -50,9 +52,18 @@ class Trades:
         self.update_status(trade_index, 'Closed')
 
 # Execution DataFrame - Read the data from CSV
-path = 'tradelog_importer/trades/U6277264_20210712.tlg'
+path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
 executions = Executions(path)
 trades = Trades()
+
+def performance(func):
+    def wrapper(*args, **kwargs):
+        t1 = time()
+        result = func(*args, **kwargs)
+        t2 = time()
+        print(f'Runtime is {round(t2 - t1, 2)}s')
+        return result
+    return wrapper
 
 def trade_status(new_position, side):
     if new_position == 0:
@@ -72,6 +83,7 @@ def calculate_held():
     trades.df['Held'] = t1 - t2
     trades.df['Held'] = trades.df['Held'].astype(str).str[-8:]
 
+@performance
 def main_loop():
     for index, row in executions.df.iterrows():
         open_date = row['Date Time']
@@ -110,9 +122,12 @@ def main_loop():
             else:
                 print('Trade is still open, continue')
 
-main_loop()
-calculate_held()
+#main_loop()
+#calculate_held()
 print(trades.df)
+print(executions.df)
+
+
 
 ''' 
 Sort executions by Date
