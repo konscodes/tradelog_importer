@@ -1,5 +1,6 @@
 import pandas as pd
 from time import time
+import random
 
 class Executions:
     def __init__(self, path):
@@ -22,11 +23,15 @@ class Trades:
         trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open'}
         self.df = self.df.append(trade_data, ignore_index=True)
 
+    def close(self, trade_index, close_date):
+        self.update_date(trade_index, close_date, 'Close')
+        self.update_status(trade_index, 'Closed')
+    
     def update_status(self, trade_index, status):
-        trades.df.at[trade_index, 'Status'] = status
+        self.df.at[trade_index, 'Status'] = status
 
     def get_position(self, trade_index):
-        position_current = trades.df.at[trade_index, 'Open Pos']
+        position_current = self.df.at[trade_index, 'Open Pos']
         return position_current
 
     def update_position(self, trade_index, position):
@@ -34,23 +39,29 @@ class Trades:
 
     def update_price(self, trade_index, state, price):
         if state == 'Entry':
-            trades.df.at[trade_index, 'Entry'] = price
+            self.df.at[trade_index, 'Entry'] = price
         elif state == 'Exit':
-            trades.df.at[trade_index, 'Exit'] = price
+            self.df.at[trade_index, 'Exit'] = price
     
     def get_side(self, trade_index):
-        side = trades.df.at[trade_index, 'Side']
+        side = self.df.at[trade_index, 'Side']
         return side
     
-    def set_date(self, trade_index, date, stamp):
+    def update_date(self, trade_index, date, stamp):
         if stamp == 'Open' or 'Close':
             self.df.at[trade_index, stamp] = date
         else:
             raise print('Not able to validate the Date stamp')
     
-    def close(self, trade_index, close_date):
-        self.set_date(trade_index, close_date, 'Close')
-        self.update_status(trade_index, 'Closed')
+    def generate_id(self):
+        trade_id = random.randint(100000, 999999)
+        while (self.df['Trade ID'] == trade_id).any():
+            trade_id = random.randint(100000, 999999)
+        return trade_id
+    
+    def update_id(self, trade_index, trade_id):
+        self.df.at[trade_index, 'Trade ID'] = trade_id
+            
 
 # Execution DataFrame - Read the data from CSV
 path = 'tradelog_importer/trades/U6277264_20210712.tlg'
@@ -123,6 +134,7 @@ def main_loop():
                 # Create exec ID and add to key dict
             else:
                 print('Trade is still open, continue')
+
 
 main_loop()
 calculate_held()
