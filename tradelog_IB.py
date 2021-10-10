@@ -18,9 +18,9 @@ class Trades:
         headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Entry', 'Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Pos', 'Status', 'Trade ID']
         self.df = pd.DataFrame(columns=headers)
 
-    def add(self, date, symbol, shares):
+    def add(self, date, symbol, shares, trade_id):
         side = 'Long' if shares > 0 else 'Short'
-        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open'}
+        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open', 'Trade ID': trade_id}
         self.df = self.df.append(trade_data, ignore_index=True)
 
     def close(self, trade_index, close_date):
@@ -108,9 +108,9 @@ def main_loop():
         match = trades.df[condition1 & condition2]
         if match.empty:
             print('No match in the DataFrame, adding new entry')
-            # Create trade ID
+            trade_id = trades.generate_id()
             # Add first exec ID to the key dict
-            trades.add(open_date, symbol, shares)
+            trades.add(open_date, symbol, shares, trade_id)
         else:
             print('Match found, updating position')
             # Add exec ID to key dict
