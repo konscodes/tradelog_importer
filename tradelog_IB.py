@@ -4,12 +4,13 @@ from time import time
 class Executions:
     def __init__(self, path):
         self.path = path
-        self.df = pd.read_csv(path, sep='|', header=None, skiprows=5, engine='python', skipfooter=1, parse_dates=[7, 8])
+        self.df = pd.read_csv(path, sep='|', header=None, skiprows=5, engine='python', skipfooter=1, parse_dates=[7,8])
+        missing_check = pd.isnull(self.df[2])
+        self.df = self.df[missing_check == False]
+        self.df[8] = pd.to_datetime(self.df[7] + ' ' + self.df[8]) if type(self.df[7][0]) is str else self.df[8]
         self.df = self.df.drop(columns=[0,1,3,4,5,7,9,11,13,15])
         self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
         self.df = self.df.sort_values(by='Date Time')
-        missing_check = pd.isnull(self.df['Symb'])
-        self.df = self.df[missing_check == False]
 
 class Trades:
     def __init__(self):
@@ -52,7 +53,8 @@ class Trades:
         self.update_status(trade_index, 'Closed')
 
 # Execution DataFrame - Read the data from CSV
-path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
+path = 'tradelog_importer/trades/U6277264_20210712.tlg'
+#path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
 executions = Executions(path)
 trades = Trades()
 
@@ -122,11 +124,9 @@ def main_loop():
             else:
                 print('Trade is still open, continue')
 
-#main_loop()
-#calculate_held()
+main_loop()
+calculate_held()
 print(trades.df)
-print(executions.df)
-
 
 
 ''' 
