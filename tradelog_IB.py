@@ -9,7 +9,7 @@ class Executions:
         missing_check = pd.isnull(self.df[2])
         self.df = self.df[missing_check == False]
         self.df[8] = pd.to_datetime(self.df[7] + ' ' + self.df[8]) if type(self.df[7][0]) is str else self.df[8]
-        self.df = self.df.drop(columns=[0,1,3,4,5,7,9,11,13,15])
+        self.df = self.df.drop(columns=[0,3,4,5,7,9,11,13,15])
         self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
         self.df = self.df.sort_values(by='Date Time')
 
@@ -59,6 +59,10 @@ class Trades:
             trade_id = random.randint(100000, 999999)
         return trade_id
     
+    def get_id(self, trade_index):
+        trade_id = self.df.at[trade_index, 'Trade ID']
+        return trade_id
+
     def update_id(self, trade_index, trade_id):
         self.df.at[trade_index, 'Trade ID'] = trade_id
             
@@ -68,6 +72,9 @@ path = 'tradelog_importer/trades/U6277264_20210712.tlg'
 #path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
 executions = Executions(path)
 trades = Trades()
+
+# Trade - Execution assignment dictionary
+key_dict = {}
 
 def performance(func):
     def wrapper(*args, **kwargs):
@@ -98,26 +105,28 @@ def calculate_held():
 
 @performance
 def main_loop():
+    global key_dict
     for index, row in executions.df.iterrows():
         open_date = row['Date Time']
         symbol = row['Symb']
         shares = row['Shares']
-        price = row['Price']
+        execution_id = row['ID']
         condition1 = trades.df['Symb'] == symbol
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
         if match.empty:
             print('No match in the DataFrame, adding new entry')
             trade_id = trades.generate_id()
-            # Add first exec ID to the key dict
             trades.add(open_date, symbol, shares, trade_id)
+            key_dict.update({trade_id: execution_id})
         else:
-            print('Match found, updating position')
-            # Add exec ID to key dict
+            print('Match found, updating position') 
             trade_index = match.index[0]
             initial_position = trades.get_position(trade_index)
             new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
+            trade_id = trades.get_id(trade_index)
+            key_dict[trade_id] = [key_dict[trade_id], execution_id]
             side = trades.get_side(trade_index)
             status_check = trade_status(new_position, side)
             if status_check == 'Closed':
@@ -139,6 +148,7 @@ def main_loop():
 main_loop()
 calculate_held()
 print(trades.df)
+print(key_dict)
 
 
 ''' 
