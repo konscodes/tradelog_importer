@@ -137,10 +137,10 @@ def main_loop():
                 close_date = row['Date Time']
                 trades.update_position(trade_index, 0)
                 trades.close(trade_index, close_date)
-                # Change current exec shares to fit to 0 total
                 open_date = close_date
-                trades.add(open_date, symbol, new_position)
-                # Create exec ID and add to key dict
+                trade_id = trades.generate_id()
+                trades.add(open_date, symbol, new_position, trade_id)
+                key_dict.update({trade_id: execution_id})
             else:
                 print('Trade is still open, continue')
 
@@ -167,13 +167,9 @@ Loop for counting shares
         add new entry,
         add shares,
         set status to Open
-'''
 
-# add trade ID and create additional column with trade ID for execution - trade match
-
-'''
 Supporting position flip and taking missing executions into account
-Existiong execution df
+Existing execution df
 Add new executions - keep IDs in memory
 Sort by Date, select by symbol
 For each ID from memory present in selection get min index
