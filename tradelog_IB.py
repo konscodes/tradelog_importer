@@ -6,13 +6,20 @@ import random
 class Executions:
     def __init__(self, path):
         self.path = path
-        self.df = pd.read_csv(path, sep='|', header=None, skiprows=5, engine='python', skipfooter=1, parse_dates=[7,8])
-        missing_check = pd.isnull(self.df[2])
-        self.df = self.df[missing_check == False]
-        self.df[8] = pd.to_datetime(self.df[7] + ' ' + self.df[8]) if type(self.df[7][0]) is str else self.df[8]
-        self.df = self.df.drop(columns=[0,3,4,5,7,9,11,13,15])
-        self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
-        self.df = self.df.sort_values(by='Date Time')
+        self.df = pd.read_csv(path, sep='|', header=None, skiprows=5, engine='python', skipfooter=1)
+        self.df[7] = pd.to_datetime(self.df[7], format='%Y%m%d').dt.date
+        self.df[8] = pd.to_datetime(self.df[8], format='%H:%M:%S').dt.time
+        #self.df['DateTime'] = self.df[7].astype(str) + ' ' + self.df[8].astype(str)
+        self.df['DateTime'] = self.df.apply(lambda r : pd.datetime.combine(r[7],r[8]), 1)
+        print(self.df[7])
+        print(self.df[8])
+        print(self.df['DateTime'])
+        # missing_check = pd.isnull(self.df[2])
+        # self.df = self.df[missing_check == False]
+        # self.df[8] = pd.to_datetime(self.df[7] + ' ' + self.df[8]) if type(self.df[7][0]) is str else self.df[8]
+        # self.df = self.df.drop(columns=[0,3,4,5,7,9,11,13,15])
+        # self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
+        # self.df = self.df.sort_values(by='Date Time')
 
 class Trades:
     def __init__(self):
@@ -164,8 +171,8 @@ def main_func():
     calc_held_time()
     calc_price_avr()
 
-main_func()
-print(trades.df)
+#main_func()
+#print(trades.df)
 
 ''' 
 Sort executions by Date
