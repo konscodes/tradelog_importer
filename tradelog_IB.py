@@ -1,3 +1,4 @@
+from numpy.lib.function_base import average
 import pandas as pd
 from time import time
 import random
@@ -18,54 +19,60 @@ class Trades:
         headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Entry', 'Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Pos', 'Status', 'Trade ID']
         self.df = pd.DataFrame(columns=headers)
 
-    def add(self, date, symbol, shares, trade_id):
-        side = 'Long' if shares > 0 else 'Short'
-        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open', 'Trade ID': trade_id}
-        self.df = self.df.append(trade_data, ignore_index=True)
-
-    def close(self, trade_index, close_date):
-        self.update_date(trade_index, close_date, 'Close')
-        self.update_status(trade_index, 'Closed')
-    
-    def update_status(self, trade_index, status):
-        self.df.at[trade_index, 'Status'] = status
-
-    def get_position(self, trade_index):
-        position_current = self.df.at[trade_index, 'Open Pos']
-        return position_current
-
-    def update_position(self, trade_index, position):
-        self.df.at[trade_index, 'Open Pos'] = position
-
-    def update_price(self, trade_index, state, price):
-        if state == 'Entry':
-            self.df.at[trade_index, 'Entry'] = price
-        elif state == 'Exit':
-            self.df.at[trade_index, 'Exit'] = price
-    
-    def get_side(self, trade_index):
-        side = self.df.at[trade_index, 'Side']
-        return side
-    
-    def update_date(self, trade_index, date, stamp):
-        if stamp == 'Open' or 'Close':
-            self.df.at[trade_index, stamp] = date
-        else:
-            raise print('Not able to validate the Date stamp')
-    
     def generate_id(self):
         trade_id = random.randint(100000, 999999)
         while (self.df['Trade ID'] == trade_id).any():
             trade_id = random.randint(100000, 999999)
         return trade_id
     
+    def add(self, date, symbol, shares, trade_id):
+        side = 'Long' if shares > 0 else 'Short'
+        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open', 'Trade ID': trade_id}
+        self.df = self.df.append(trade_data, ignore_index=True)
+    
+    def update_status(self, trade_index, status):
+        self.df.at[trade_index, 'Status'] = status
+
+    def update_date(self, trade_index, date, stamp):
+        if stamp == 'Open' or 'Close':
+            self.df.at[trade_index, stamp] = date
+        else:
+            raise print('Not able to validate the Date stamp')
+    
+    def close(self, trade_index, close_date):
+        self.update_date(trade_index, close_date, 'Close')
+        self.update_status(trade_index, 'Closed')
+    
     def get_id(self, trade_index):
         trade_id = self.df.at[trade_index, 'Trade ID']
         return trade_id
+    
+    def get_index(self, trade_id):
+        filter_series = self.df['Trade ID'] == trade_id
+        selection = self.df[filter_series]
+        trade_index = selection.index[0]
+        return trade_index
+    
+    def get_side(self, trade_index):
+        side = self.df.at[trade_index, 'Side']
+        return side
 
+    def get_position(self, trade_index):
+        position_current = self.df.at[trade_index, 'Open Pos']
+        return position_current
+
+    def get_details(self, trade_id):
+        execution_list = key_dict[trade_id]
+        filter_series = executions.df['ID'].isin(execution_list)
+        execution_data = executions.df[filter_series]
+        return execution_data
+    
     def update_id(self, trade_index, trade_id):
         self.df.at[trade_index, 'Trade ID'] = trade_id
-            
+
+    def update_position(self, trade_index, position):
+        self.df.at[trade_index, 'Open Pos'] = position
+
 
 # Execution DataFrame - Read the data from CSV
 path = 'tradelog_importer/trades/U6277264_20210712.tlg'
@@ -85,7 +92,7 @@ def performance(func):
         return result
     return wrapper
 
-def trade_status(new_position, side):
+def define_status(new_position, side):
     if new_position == 0:
         return 'Closed'
     elif new_position < 0 and side == 'Long':
@@ -97,14 +104,25 @@ def trade_status(new_position, side):
     else:
         return 'Continue'
 
-def calculate_held():
+def calc_held_time():
     t1 = pd.to_datetime(trades.df['Close'])
     t2 = pd.to_datetime(trades.df['Open'])
     trades.df['Held'] = t1 - t2
     trades.df['Held'] = trades.df['Held'].astype(str).str[-8:]
 
+def calc_price_avr():
+    for trade_id in trades.df['Trade ID'].tolist():
+        execution_data = trades.get_details(trade_id)
+        filter_data = execution_data.query("Code == 'O'")
+        price = average(filter_data['Price'])
+        trade_index = trades.get_index(trade_id)
+        trades.df.at[trade_index, 'Entry'] = price
+        filter_data = execution_data.query("Code == 'C' or Code == 'O,C'")
+        price = average(filter_data['Price'])
+        trades.df.at[trade_index, 'Exit'] = price
+
 @performance
-def main_loop():
+def main_func():
     global key_dict
     for index, row in executions.df.iterrows():
         open_date = row['Date Time']
@@ -128,7 +146,7 @@ def main_loop():
             trade_id = trades.get_id(trade_index)
             key_dict[trade_id] = key_dict[trade_id] + execution_id
             side = trades.get_side(trade_index)
-            status_check = trade_status(new_position, side)
+            status_check = define_status(new_position, side)
             if status_check == 'Closed':
                 print('Position is closed, changing status to Closed')
                 close_date = row['Date Time']
@@ -143,13 +161,11 @@ def main_loop():
                 key_dict.update({trade_id: execution_id})
             else:
                 print('Trade is still open, continue')
+    calc_held_time()
+    calc_price_avr()
 
-
-main_loop()
-calculate_held()
+main_func()
 print(trades.df)
-print(key_dict)
-
 
 ''' 
 Sort executions by Date
