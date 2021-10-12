@@ -110,7 +110,7 @@ def main_loop():
         open_date = row['Date Time']
         symbol = row['Symb']
         shares = row['Shares']
-        execution_id = row['ID']
+        execution_id = [row['ID']]
         condition1 = trades.df['Symb'] == symbol
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
@@ -126,7 +126,7 @@ def main_loop():
             new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
             trade_id = trades.get_id(trade_index)
-            key_dict[trade_id] = [key_dict[trade_id], execution_id]
+            key_dict[trade_id] = key_dict[trade_id] + execution_id
             side = trades.get_side(trade_index)
             status_check = trade_status(new_position, side)
             if status_check == 'Closed':
