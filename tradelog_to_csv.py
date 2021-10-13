@@ -24,4 +24,4 @@ df.loc[(df['Side'] == 'Short') & (df['Diff'] < 0), 'Gross'] = df['Gross'] * -1
 df = df.drop(columns=['Diff'])
 df = df.sort_values(by=['Close Date/Time'], ascending=True).reset_index(drop=True)
 print(df)
-df.to_csv('tradelog_importer/trade.csv')
+df.to_csv('tradelog_importer/trades.csv')
