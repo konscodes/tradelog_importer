@@ -3,7 +3,11 @@ import pandas as pd
 from time import time
 import random
 from datetime import datetime
-import pdb
+import tkinter as tk
+from tkinter import filedialog
+
+root = tk.Tk()
+root.withdraw()
 
 class Executions:
     def __init__(self, path):
@@ -79,8 +83,9 @@ class Trades:
 
 
 # Execution DataFrame - Read the data from CSV
-path = 'tradelog_importer/trades/U6277264_20210712.tlg'
+#path = 'tradelog_importer/trades/U6277264_20210712.tlg'
 #path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
+path = filedialog.askopenfilename()
 executions = Executions(path)
 trades = Trades()
 
@@ -126,18 +131,18 @@ def calc_price():
         qty = sum(open_data['Shares'])
         trades.df.at[trade_index, 'Qty'] = qty
         price = entry_pos/qty
-        trades.df.at[trade_index, 'Avr Entry'] = price
+        trades.df.at[trade_index, 'Avr Entry'] = round(price, 2)
         # Updating avr exit price
         close_data = execution_data.query("Code == 'C' or Code == 'O,C'")
         exit_pos = sum(close_data['Pos'])
         price = exit_pos/qty
-        trades.df.at[trade_index, 'Avr Exit'] = price
+        trades.df.at[trade_index, 'Avr Exit'] = round(price, 2)
         # Updating Gross/Net
         gross = exit_pos - entry_pos if (trades.df.at[trade_index, 'Side'] == 'Long') else entry_pos - exit_pos
-        trades.df.at[trade_index, 'Gross'] = gross
+        trades.df.at[trade_index, 'Gross'] = round(gross, 2)
         comm = sum(execution_data['Comm'])
-        trades.df.at[trade_index, 'Comm'] = comm
-        trades.df.at[trade_index, 'Net'] = gross + comm
+        trades.df.at[trade_index, 'Comm'] = round(comm, 4)
+        trades.df.at[trade_index, 'Net'] = round(gross + comm, 2)
 
 @performance
 def main_func():
@@ -183,9 +188,10 @@ def main_func():
     calc_price()
 
 main_func()
-print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net']].sort_values(by='Close', ascending=False))
-trades.df.to_csv('tradelog_importer/trades.csv')
-#pdb.set_trace()
+print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
+export = trades.df.copy()
+export.to_csv('tradelog_importer/trades.csv', index=False)
+
 
 ''' 
 Sort executions by Date
