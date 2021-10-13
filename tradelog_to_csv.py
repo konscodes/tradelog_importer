@@ -12,7 +12,7 @@ df['Open Date/Time'] = pd.to_datetime(df['Open Date'] + ' ' + df['Open Time'].st
 df['Close Date/Time'] = pd.to_datetime(df['Close Date'] + ' ' + df['Close Time'].str[4:])
 df = df.drop(columns=['Open Date', 'Open Time', 'Close Date', 'Close Time'])
 columns_list = df.columns.tolist()
-columns_sorted = columns_list[-2:] + columns_list[:-2] # takiing last two columns [-2:] and adding everything before that [:-2]
+columns_sorted = columns_list[-2:] + columns_list[:-2] # taking last two columns [-2:] and adding everything before that [:-2]
 df = df[columns_sorted]
 df['Shares'] = (df['Shares'] / 2).astype({'Shares': int})
 df['Side'] = df['Side'].str.title()
