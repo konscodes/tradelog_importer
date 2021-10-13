@@ -13,16 +13,14 @@ class Executions:
         self.df = self.df[missing_check == False]
         self.df[7] = pd.to_datetime(self.df[7], format='%Y%m%d').dt.date
         self.df[8] = pd.to_datetime(self.df[8], format='%H:%M:%S').dt.time
-        #self.df['DateTime'] = self.df[7].astype(str) + ' ' + self.df[8].astype(str)
         self.df[8] = self.df.apply(lambda r : datetime.combine(r[7],r[8]), 1)
-        # self.df[8] = pd.to_datetime(self.df[7] + ' ' + self.df[8]) if type(self.df[7][0]) is str else self.df[8]
-        self.df = self.df.drop(columns=[0,3,4,5,7,9,11,13,15])
-        self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'Date Time', 10:'Shares', 12:'Price', 14:'Comm'})
-        self.df = self.df.sort_values(by='Date Time')
+        self.df = self.df.drop(columns=[0,3,4,5,7,9,11,15])
+        self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'DateTime', 10:'Shares', 12:'Price', 13:'Pos', 14:'Comm'})
+        self.df = self.df.sort_values(by='DateTime')
 
 class Trades:
     def __init__(self):
-        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Pos', 'Status', 'Trade ID']
+        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Qty', 'Status', 'Trade ID']
         self.df = pd.DataFrame(columns=headers)
 
     def generate_id(self):
@@ -33,7 +31,7 @@ class Trades:
     
     def add(self, date, symbol, shares, trade_id):
         side = 'Long' if shares > 0 else 'Short'
-        trade_data = {'Open': date, 'Symb': symbol, 'Open Pos': shares, 'Side': side, 'Status': 'Open', 'Trade ID': trade_id}
+        trade_data = {'Open': date, 'Symb': symbol, 'Open Qty': shares, 'Side': side, 'Status': 'Open', 'Trade ID': trade_id}
         self.df = self.df.append(trade_data, ignore_index=True)
     
     def update_status(self, trade_index, status):
@@ -64,20 +62,20 @@ class Trades:
         return side
 
     def get_position(self, trade_index):
-        position_current = self.df.at[trade_index, 'Open Pos']
+        position_current = self.df.at[trade_index, 'Open Qty']
         return position_current
 
     def get_details(self, trade_id):
         execution_list = key_dict[trade_id]
         filter_series = executions.df['ID'].isin(execution_list)
-        execution_data = executions.df[filter_series]
+        execution_data = executions.df[filter_series].copy()
         return execution_data
     
     def update_id(self, trade_index, trade_id):
         self.df.at[trade_index, 'Trade ID'] = trade_id
 
     def update_position(self, trade_index, position):
-        self.df.at[trade_index, 'Open Pos'] = position
+        self.df.at[trade_index, 'Open Qty'] = position
 
 
 # Execution DataFrame - Read the data from CSV
@@ -110,28 +108,42 @@ def define_status(new_position, side):
     else:
         return 'Continue'
 
-def calc_held_time():
+def calc_time():
     t1 = pd.to_datetime(trades.df['Close'])
     t2 = pd.to_datetime(trades.df['Open'])
     trades.df['Held'] = t1 - t2
     trades.df['Held'] = trades.df['Held'].astype(str).str[-8:]
 
-def calc_price_avr():
+def calc_price():
     for trade_id in trades.df['Trade ID'].tolist():
-        execution_data = trades.get_details(trade_id)
-        filter_data = execution_data.query("Code == 'O'")
-        price = average(filter_data['Price'])
         trade_index = trades.get_index(trade_id)
+        execution_data = trades.get_details(trade_id)
+        execution_data['Shares'] = execution_data['Shares'].abs()
+        execution_data['Pos'] = execution_data['Pos'].abs()
+        # Updating avr entry price
+        open_data = execution_data.query("Code == 'O'")
+        entry_pos = sum(open_data['Pos'])
+        qty = sum(open_data['Shares'])
+        trades.df.at[trade_index, 'Qty'] = qty
+        price = entry_pos/qty
         trades.df.at[trade_index, 'Avr Entry'] = price
-        filter_data = execution_data.query("Code == 'C' or Code == 'O,C'")
-        price = average(filter_data['Price'])
+        # Updating avr exit price
+        close_data = execution_data.query("Code == 'C' or Code == 'O,C'")
+        exit_pos = sum(close_data['Pos'])
+        price = exit_pos/qty
         trades.df.at[trade_index, 'Avr Exit'] = price
+        # Updating Gross/Net
+        gross = exit_pos - entry_pos if (trades.df.at[trade_index, 'Side'] == 'Long') else entry_pos - exit_pos
+        trades.df.at[trade_index, 'Gross'] = gross
+        comm = sum(execution_data['Comm'])
+        trades.df.at[trade_index, 'Comm'] = comm
+        trades.df.at[trade_index, 'Net'] = gross + comm
 
 @performance
 def main_func():
     global key_dict
     for index, row in executions.df.iterrows():
-        open_date = row['Date Time']
+        open_date = row['DateTime']
         symbol = row['Symb']
         shares = row['Shares']
         execution_id = [row['ID']]
@@ -155,10 +167,10 @@ def main_func():
             status_check = define_status(new_position, side)
             if status_check == 'Closed':
                 print('Position is closed, changing status to Closed')
-                close_date = row['Date Time']
+                close_date = row['DateTime']
                 trades.close(trade_index, close_date)
             elif status_check == 'Flip':
-                close_date = row['Date Time']
+                close_date = row['DateTime']
                 trades.update_position(trade_index, 0)
                 trades.close(trade_index, close_date)
                 open_date = close_date
@@ -167,12 +179,13 @@ def main_func():
                 key_dict.update({trade_id: execution_id})
             else:
                 print('Trade is still open, continue')
-    calc_held_time()
-    calc_price_avr()
+    calc_time()
+    calc_price()
 
 main_func()
-print(trades.df[['Open', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty']])
-pdb.set_trace()
+print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net']].sort_values(by='Close', ascending=False))
+trades.df.to_csv('tradelog_importer/trades.csv')
+#pdb.set_trace()
 
 ''' 
 Sort executions by Date
@@ -191,7 +204,7 @@ Loop for counting shares
         add shares,
         set status to Open
 
-Supporting position flip and taking missing executions into account
+- Supporting position flip and taking missing executions into account
 Existing execution df
 Add new executions - keep IDs in memory
 Sort by Date, select by symbol
