@@ -21,6 +21,16 @@ class Executions:
         self.df = self.df.drop(columns=[0,3,4,5,7,9,11,15])
         self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'DateTime', 10:'Shares', 12:'Price', 13:'Pos', 14:'Comm'})
         self.df = self.df.sort_values(by='DateTime')
+    
+    def add(self, execution_id, symbol, code, date, shares, price, pos, comm):
+        execution_data = {'ID': execution_id, 'Symb': symbol, 'Code': code, 'DateTime': date, 'Shares': shares, 'Price': price, 'Pos': pos, 'Comm': comm}
+        self.df = self.df.append(execution_data, ignore_index=True)
+    
+    def update_shares(self, execution_index, shares):
+        self.df.at[execution_index, 'Shares'] = shares
+
+    def update_position(self, execution_index, pos):
+        self.df.at[execution_index, 'Pos'] = pos
 
 class Trades:
     def __init__(self):
@@ -81,10 +91,8 @@ class Trades:
     def update_position(self, trade_index, position):
         self.df.at[trade_index, 'Open Qty'] = position
 
-
 # Execution DataFrame - Read the data from CSV
 #path = 'tradelog_importer/trades/U6277264_20210712.tlg'
-#path = 'tradelog_importer/trades/U6277264_20210101_20211008.tlg'
 path = filedialog.askopenfilename()
 executions = Executions(path)
 trades = Trades()
@@ -133,7 +141,7 @@ def calc_price():
         price = entry_pos/qty
         trades.df.at[trade_index, 'Avr Entry'] = round(price, 2)
         # Updating avr exit price
-        close_data = execution_data.query("Code == 'C' or Code == 'O,C'")
+        close_data = execution_data.query("Code == 'C' or Code == 'C;O'")
         exit_pos = sum(close_data['Pos'])
         price = exit_pos/qty
         trades.df.at[trade_index, 'Avr Exit'] = round(price, 2)
@@ -151,7 +159,8 @@ def main_func():
         open_date = row['DateTime']
         symbol = row['Symb']
         shares = row['Shares']
-        execution_id = [row['ID']]
+        price = row['Price']
+        execution_id = row['ID']
         condition1 = trades.df['Symb'] == symbol
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
@@ -159,7 +168,7 @@ def main_func():
             print('No match in the DataFrame, adding new entry')
             trade_id = trades.generate_id()
             trades.add(open_date, symbol, shares, trade_id)
-            key_dict.update({trade_id: execution_id})
+            key_dict.update({trade_id: [execution_id]})
         else:
             print('Match found, updating position') 
             trade_index = match.index[0]
@@ -167,7 +176,7 @@ def main_func():
             new_position = initial_position + shares
             trades.update_position(trade_index, new_position)
             trade_id = trades.get_id(trade_index)
-            key_dict[trade_id] = key_dict[trade_id] + execution_id
+            key_dict[trade_id] = key_dict[trade_id] + [execution_id]
             side = trades.get_side(trade_index)
             status_check = define_status(new_position, side)
             if status_check == 'Closed':
@@ -175,13 +184,23 @@ def main_func():
                 close_date = row['DateTime']
                 trades.close(trade_index, close_date)
             elif status_check == 'Flip':
+                # Close existion trade
                 close_date = row['DateTime']
                 trades.update_position(trade_index, 0)
                 trades.close(trade_index, close_date)
+                # Open new trade
                 open_date = close_date
                 trade_id = trades.generate_id()
                 trades.add(open_date, symbol, new_position, trade_id)
-                key_dict.update({trade_id: execution_id})
+                # Update existing execution
+                executions.update_shares(index, -initial_position)
+                pos = (-initial_position) * price
+                executions.update_position(index, pos)
+                # Add new execution
+                execution_id = int(str(execution_id)[::-1])
+                pos = new_position * price
+                executions.add(execution_id, symbol, 'O', open_date, new_position, price, pos, 0)
+                key_dict.update({trade_id: [execution_id]})
             else:
                 print('Trade is still open, continue')
     calc_time()
@@ -189,6 +208,7 @@ def main_func():
 
 main_func()
 print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
+#print(trades.df)
 export = trades.df.copy()
 export.to_csv('tradelog_importer/trades.csv', index=False)
 
