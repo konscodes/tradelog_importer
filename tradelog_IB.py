@@ -1,4 +1,3 @@
-from numpy.lib.function_base import average
 import pandas as pd
 from time import time
 import random
