@@ -208,7 +208,7 @@ def main_func():
 main_func()
 print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
 #print(trades.df)
-export = trades.df.copy()
+export = trades.df.sort_values(by='Close').copy()
 export.to_csv('tradelog_importer/trades.csv', index=False)
 
 
