@@ -4,6 +4,7 @@ import random
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
+import pdb
 
 root = tk.Tk()
 root.withdraw()
@@ -19,7 +20,7 @@ class Executions:
         self.df[8] = self.df.apply(lambda r : datetime.combine(r[7],r[8]), 1)
         self.df = self.df.drop(columns=[0,3,4,5,7,9,11,15])
         self.df = self.df.rename(columns={1:'ID', 2:'Symb', 6:'Code', 8:'DateTime', 10:'Shares', 12:'Price', 13:'Pos', 14:'Comm'})
-        self.df = self.df.sort_values(by='DateTime')
+        self.df = self.df.sort_values(['Symb', 'DateTime'], ascending=[True, True])
     
     def add(self, execution_id, symbol, code, date, shares, price, pos, comm):
         execution_data = {'ID': execution_id, 'Symb': symbol, 'Code': code, 'DateTime': date, 'Shares': shares, 'Price': price, 'Pos': pos, 'Comm': comm}
@@ -108,14 +109,14 @@ def performance(func):
         return result
     return wrapper
 
-def define_status(new_position, side):
+def define_status(new_position, side, symbol):
     if new_position == 0:
         return 'Closed'
     elif new_position < 0 and side == 'Long':
-        print('Long -> flip to Short detected, adding new trade')
+        print(f'Long -> flip to Short detected on {symbol}, adding new trade')
         return 'Flip'
     elif new_position > 0 and side == 'Short':
-        print('Short -> flip to Long detected, adding new trade')
+        print(f'Short -> flip to Long detected on {symbol}, adding new trade')
         return 'Flip'
     else:
         return 'Continue'
@@ -164,12 +165,12 @@ def main_func():
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
         if match.empty:
-            print('No match in the DataFrame, adding new entry')
+            #print('No match in the DataFrame, adding new entry')
             trade_id = trades.generate_id()
             trades.add(open_date, symbol, shares, trade_id)
             key_dict.update({trade_id: [execution_id]})
         else:
-            print('Match found, updating position') 
+            #print('Match found, updating position') 
             trade_index = match.index[0]
             initial_position = trades.get_position(trade_index)
             new_position = initial_position + shares
@@ -177,13 +178,13 @@ def main_func():
             trade_id = trades.get_id(trade_index)
             key_dict[trade_id] = key_dict[trade_id] + [execution_id]
             side = trades.get_side(trade_index)
-            status_check = define_status(new_position, side)
+            status_check = define_status(new_position, side, symbol)
             if status_check == 'Closed':
-                print('Position is closed, changing status to Closed')
+                #print('Position is closed, changing status to Closed')
                 close_date = row['DateTime']
                 trades.close(trade_index, close_date)
             elif status_check == 'Flip':
-                # Close existion trade
+                # Close existing trade
                 close_date = row['DateTime']
                 trades.update_position(trade_index, 0)
                 trades.close(trade_index, close_date)
@@ -193,6 +194,7 @@ def main_func():
                 trades.add(open_date, symbol, new_position, trade_id)
                 # Update existing execution
                 executions.update_shares(index, -initial_position)
+                #pdb.set_trace()
                 pos = (-initial_position) * price
                 executions.update_position(index, pos)
                 # Add new execution
@@ -201,7 +203,8 @@ def main_func():
                 executions.add(execution_id, symbol, 'O', open_date, new_position, price, pos, 0)
                 key_dict.update({trade_id: [execution_id]})
             else:
-                print('Trade is still open, continue')
+                #print('Trade is still open, continue')
+                pass
     calc_time()
     calc_price()
 
