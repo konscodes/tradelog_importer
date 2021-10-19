@@ -1,9 +1,8 @@
 import pandas as pd
 from time import time
 import random
-from datetime import datetime
-
-from pandas.core import series
+#from datetime import datetime
+import plotly.graph_objects as go
 
 path = 'tradelog_importer/trades/trades.csv'
 df = pd.read_csv(path, sep=',', header=0, engine='python')
@@ -57,10 +56,13 @@ def sim_data():
         upper = range_df.loc[i]['Upper']
         lower = range_df.loc[i]['Lower']
         rate = range_df.loc[i]['Rate']
-        trades = int(trades_total * rate)
-        print(trades)
+        # Number of trades for each p/l range
+        trades = int(trades_total * rate) 
+        # For each trade generate random float p/l from corresponding range
         gross = list(map(lambda i: random.uniform(lower, upper), range(trades)))
-        print(gross)
+        data = {'Gross': gross}
+        sim_df = sim_df.append(pd.DataFrame(data), ignore_index=True)
+    print(sim_df)
 
 my_data()
 sim_data()
