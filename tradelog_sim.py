@@ -35,14 +35,15 @@ def my_data():
     max_loss = df['Gross'].min()
     print(f'Max loss: {max_loss}')
     print()
-    split_factor = 10
+    split_factor = 20
     split = (abs(max_loss) + max_win)/split_factor
-    upper = max_win
+    upper = max_win + 0.01
     for i in range(split_factor):
-        lower = upper - split
+        lower = upper - split - 0.01
         trades_range = len(df[df['Gross'].between(lower, upper)].index)
         occurrence = trades_range/trades_total
-        print(f'Range from {round(upper, 4)} to {round(lower, 4)}: {occurrence:.1%}')
+        print(f'Range from {round(upper, 4)} to {round(lower, 4)}, and {trades_range} trades')
+        print(f'Occurrence: {occurrence}')
         range_data = {'Upper': upper, 'Lower': lower, 'Rate': occurrence}
         range_df = range_df.append(range_data, ignore_index=True)
         upper = lower
@@ -51,7 +52,7 @@ def my_data():
 def sim_data():
     global range_df
     global sim_df
-    trades_total = 1000
+    trades_total = 5000
     for i in range_df.index:
         upper = range_df.loc[i]['Upper']
         lower = range_df.loc[i]['Lower']
