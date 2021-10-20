@@ -5,10 +5,10 @@ import random
 import plotly.graph_objects as go
 
 path = 'tradelog_importer/trades/trades.csv'
-df = pd.read_csv(path, sep=',', header=0, engine='python')
+df = pd.read_csv(path)
 
 range_df = pd.DataFrame(columns=['Upper', 'Lower', 'Rate'])
-sim_df = pd.DataFrame(columns=['Gross'])
+sim_df = pd.DataFrame(columns=['Gross', 'Running'])
 
 def performance(func):
     def wrapper(*args, **kwargs):
@@ -35,14 +35,14 @@ def my_data():
     max_loss = df['Gross'].min()
     print(f'Max loss: {max_loss}')
     print()
-    split_factor = 5
+    split_factor = 10
     split = (abs(max_loss) + max_win)/split_factor
     upper = max_win
     for i in range(split_factor):
         lower = upper - split
         trades_range = len(df[df['Gross'].between(lower, upper)].index)
         occurrence = trades_range/trades_total
-        print(f'Range from {round(upper, 2)} to {round(lower, 2)}: {occurrence:.0%}')
+        print(f'Range from {round(upper, 4)} to {round(lower, 4)}: {occurrence:.1%}')
         range_data = {'Upper': upper, 'Lower': lower, 'Rate': occurrence}
         range_df = range_df.append(range_data, ignore_index=True)
         upper = lower
@@ -51,7 +51,7 @@ def my_data():
 def sim_data():
     global range_df
     global sim_df
-    trades_total = 100
+    trades_total = 1000
     for i in range_df.index:
         upper = range_df.loc[i]['Upper']
         lower = range_df.loc[i]['Lower']
@@ -62,10 +62,23 @@ def sim_data():
         gross = list(map(lambda i: random.uniform(lower, upper), range(trades)))
         data = {'Gross': gross}
         sim_df = sim_df.append(pd.DataFrame(data), ignore_index=True)
+    
+    sim_df = sim_df.sample(frac=1)
+    sim_df.reset_index(inplace=True, drop=True)
+    
+    for i in sim_df.index:
+        if i == 0:
+            sim_df.at[i, 'Running'] = sim_df.loc[i]['Gross']
+        else:
+            sim_df.at[i, 'Running'] = sim_df.loc[i]['Gross'] + sim_df.loc[i-1]['Running']
     print(sim_df)
 
+print(df)
 my_data()
 sim_data()
+
+fig = go.Figure([go.Scatter(x=sim_df.index, y=sim_df['Running'])])
+fig.show()
 #print(range_df)
 
 
