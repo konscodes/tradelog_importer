@@ -10,7 +10,6 @@ root.withdraw()
 #path = 'tradelog_importer/trades/trades.csv'
 path = filedialog.askopenfilename()
 df = pd.read_csv(path)
-
 range_df = pd.DataFrame(columns=['Upper', 'Lower', 'Rate'])
 sim_df = pd.DataFrame(columns=['Data', 'Running'])
 
@@ -104,10 +103,23 @@ def sim_data():
     print(sim_df)
 
 
+def plot_data():
+    fig = go.Figure()
+    scatter_plot = go.Scatter(x=sim_df.index, y=sim_df['Running'])
+    fig.add_trace(scatter_plot)
+    fig.update_layout(
+        title={'text': "Simulated trading data over a number of trades", 'x':0.5},
+        xaxis_title="Number of trades",
+        yaxis_title="Data cumulative",
+        font=dict(
+            family="Courier New, monospace",
+            size=18,
+            color="RebeccaPurple"
+        )
+    )
+    fig.show()
+
 print(df, '\n')
 my_data()
 sim_data()
-fig = go.Figure([go.Scatter(x=sim_df.index, y=sim_df['Running'])])
-fig.show()
-
-
+plot_data()
