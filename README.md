@@ -17,6 +17,7 @@ I use the script to convert executions into trades to use in other scripts for p
 
 - [`pandas`](https://pypi.org/project/pandas/) for creating table-like dataframes to store executions and trades
 - [`tkinter`](https://docs.python.org/3/library/tkinter.html) for simple file dialog
+- [`pathlib`](https://pypi.org/project/pathlib/) for cross-platform file path detection
 
 ### How to use
 
