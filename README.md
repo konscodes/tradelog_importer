@@ -1,5 +1,5 @@
 # Interactive Brokers TradeLog Importer
-
+[![Visitors](https://visitor-badge.glitch.me/badge?page_id=tradelog_importer.visitor-badge)](https://github.com/tradelog_importer)
 ### What and Why
 
 Python script that converts IB Third-Party TradeLog into .csv format.
