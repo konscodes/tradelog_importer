@@ -133,6 +133,10 @@ def calc_price():
         execution_data = trades.get_details(trade_id)
         execution_data['Shares'] = execution_data['Shares'].abs()
         execution_data['Pos'] = execution_data['Pos'].abs()
+        if not execution_data['Code'].any():
+            print(execution_data)
+            print('Missing Code?')
+            continue
         # Updating avr entry price
         open_data = execution_data.query("Code == 'O'")
         entry_pos = sum(open_data['Pos'])
@@ -160,7 +164,7 @@ def main_func():
         symbol = row['Symb']
         shares = row['Shares']
         price = row['Price']
-        execution_id = row['ID']
+        execution_id = int(row['ID'])
         condition1 = trades.df['Symb'] == symbol
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
@@ -198,6 +202,7 @@ def main_func():
                 pos = (-initial_position) * price
                 executions.update_position(index, pos)
                 # Add new execution
+                #print(execution_id)
                 execution_id = int(str(execution_id)[::-1])
                 pos = new_position * price
                 executions.add(execution_id, symbol, 'O', open_date, new_position, price, pos, 0)
