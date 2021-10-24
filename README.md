@@ -13,13 +13,13 @@ IB .tlg file turns into two dataframes with trades and executions 👇
 The output can be further used to analize your trades or use trade data with other tools like excel and google docs. </br>
 I use the script to convert executions into trades to use in other scripts for per-trade analytics.
 
-### What is used
+### Libraries used
 
 - [`pandas`](https://pypi.org/project/pandas/) for creating table-like dataframes to store executions and trades
 - [`tkinter`](https://docs.python.org/3/library/tkinter.html) for simple file dialog
 - [`pathlib`](https://pypi.org/project/pathlib/) for cross-platform file path detection
 
-### How to use
+### Try the script
 
 Download the TradeLog .tlg file from IB. </br>
 Run the script `tradelog_IB.py` and choose the file. On the output you get two dataframes with with data and .csv file with trades. </br>
