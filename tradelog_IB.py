@@ -4,7 +4,10 @@ import random
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
-import pdb
+from pathlib import Path
+
+script_path = Path(__file__).resolve()
+script_parent = script_path.parent
 
 root = tk.Tk()
 root.withdraw()
@@ -217,7 +220,8 @@ main_func()
 print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
 #print(trades.df)
 export = trades.df.sort_values(by='Close').copy()
-export.to_csv('tradelog_importer/trades.csv', index=False)
+csv_path = script_parent / 'trades.csv'
+export.to_csv(csv_path, index=False)
 
 
 ''' 
