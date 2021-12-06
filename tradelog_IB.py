@@ -9,8 +9,13 @@ from pathlib import Path
 script_path = Path(__file__).resolve()
 script_parent = script_path.parent
 
-root = tk.Tk()
-root.withdraw()
+try:
+    root = tk.Tk()
+    root.withdraw()
+    path = filedialog.askopenfilename()
+except:
+    print('\nError providing window dialog with tkinter, default path is used\n')
+    path = script_parent / 'files' / 'example_20210712.tlg'
 
 class Executions:
     def __init__(self, path):
@@ -95,8 +100,6 @@ class Trades:
         self.df.at[trade_index, 'Open Qty'] = position
 
 # Execution DataFrame - Read the data from CSV
-#path = 'tradelog_importer/trades/U6277264_20210712.tlg'
-path = filedialog.askopenfilename()
 executions = Executions(path)
 trades = Trades()
 
