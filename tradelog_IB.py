@@ -174,6 +174,9 @@ def main_func():
         condition1 = trades.df['Symb'] == symbol
         condition2 = trades.df['Status'] == 'Open'
         match = trades.df[condition1 & condition2]
+        # !!! this logic doesn't include the situation when the log only includes partial trade information
+        # such as ony closed portion of a trade - this will result in an error
+        # ideally this script should keep a log of previously imported trades to check for Open trades etc.
         if match.empty:
             #print('No match in the DataFrame, adding new entry')
             trade_id = trades.generate_id()
@@ -217,6 +220,7 @@ def main_func():
                 #print('Trade is still open, continue')
                 pass
     calc_time()
+    print(trades.df)
     calc_price()
 
 main_func()
