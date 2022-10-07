@@ -1,3 +1,4 @@
+from itertools import count
 import pandas as pd
 from time import time
 import random
@@ -42,7 +43,7 @@ class Executions:
 
 class Trades:
     def __init__(self):
-        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Qty', 'Status', 'Trade ID']
+        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Qty', 'Status', 'Trade ID', 'Exec']
         self.df = pd.DataFrame(columns=headers)
 
     def generate_id(self):
@@ -162,6 +163,14 @@ def calc_price():
         trades.df.at[trade_index, 'Comm'] = round(comm, 4)
         trades.df.at[trade_index, 'Net'] = round(gross + comm, 2)
 
+def calc_exec():
+    for trade_id in trades.df['Trade ID'].tolist():
+        trade_index = trades.get_index(trade_id)
+        execution_data = trades.get_details(trade_id)
+        open_data = execution_data.query("Code == 'O'")
+        exec = open_data['ID'].count()
+        trades.df.at[trade_index, 'Exec'] = exec
+
 @performance
 def main_func():
     global key_dict
@@ -220,11 +229,11 @@ def main_func():
                 #print('Trade is still open, continue')
                 pass
     calc_time()
-    print(trades.df)
     calc_price()
+    calc_exec()
 
 main_func()
-print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
+print(trades.df[['Close', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Exec', 'Gross', 'Comm', 'Net', 'Status']].sort_values(by='Close', ascending=False))
 #print(trades.df)
 export = trades.df.sort_values(by='Close').copy()
 csv_path = script_parent / 'trades.csv'
