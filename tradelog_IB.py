@@ -43,7 +43,7 @@ class Executions:
 
 class Trades:
     def __init__(self):
-        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Open Qty', 'Status', 'Trade ID', 'Exec']
+        headers = ['Open', 'Close', 'Held', 'Symb', 'Side', 'Avr Entry', 'Avr Exit', 'Qty', 'Gross', 'Comm', 'Net', 'Exec', 'Open Qty', 'Status', 'Trade ID']
         self.df = pd.DataFrame(columns=headers)
 
     def generate_id(self):
